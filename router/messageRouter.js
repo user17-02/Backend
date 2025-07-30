@@ -1,39 +1,51 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Message = require('../models/message');
+const Message = require("../models/message");
 
-// Send message
-router.post('/', async (req, res) => {
-  const { sender, receiver, text } = req.body;
-
-  if (!sender || !receiver || !text) {
-    return res.status(400).json({ message: "All fields are required" });
-  }
-
+// ✅ Save new message
+router.post("/", async (req, res) => {
   try {
-    const newMessage = new Message({ sender, receiver, text });
-    await newMessage.save();
-    res.status(201).json(newMessage);
+    const message = new Message(req.body);
+    const saved = await message.save();
+    res.status(201).json(saved);
   } catch (err) {
-    res.status(500).json({ message: "Error sending message" });
+    res.status(500).json({ message: err.message });
   }
 });
 
-// Get messages between two users
-router.get('/:user1/:user2', async (req, res) => {
-  const { user1, user2 } = req.params;
-
+// ✅ Get all messages between two users
+router.get("/:senderId/:receiverId", async (req, res) => {
   try {
     const messages = await Message.find({
       $or: [
-        { sender: user1, receiver: user2 },
-        { sender: user2, receiver: user1 }
-      ]
+        { sender: req.params.senderId, receiver: req.params.receiverId },
+        { sender: req.params.receiverId, receiver: req.params.senderId },
+      ],
     }).sort({ createdAt: 1 });
-
     res.json(messages);
   } catch (err) {
-    res.status(500).json({ message: "Error fetching messages" });
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ✅ Mark all messages from sender to receiver as seen
+router.put("/mark-seen", async (req, res) => {
+  const { sender, receiver } = req.body;
+
+  try {
+    const result = await Message.updateMany(
+      { sender, receiver, seen: false },
+      { $set: { seen: true } }
+    );
+
+    res.json({
+      success: true,
+      message: "Messages marked as seen",
+      modifiedCount: result.modifiedCount || 0,
+    });
+  } catch (error) {
+    console.error("Error marking messages as seen:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
