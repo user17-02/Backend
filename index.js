@@ -39,8 +39,8 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  .then(() => console.log(" MongoDB connected"))
+  .catch((err) => console.error(" MongoDB connection error:", err));
 
 // REST API Routes
 app.use("/api/user", userRouter);
@@ -51,7 +51,7 @@ app.use("/api/notifications", notificationRouter);
 
 // Socket.IO Events
 io.on("connection", (socket) => {
-  console.log("🟢 New client connected:", socket.id);
+  console.log(" New client connected:", socket.id);
 
   // Join personal room
   socket.on("joinRoom", (userId) => {

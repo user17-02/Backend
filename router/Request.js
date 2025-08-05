@@ -1,22 +1,24 @@
+// interestRoutes.js or wherever you handle requests + interest
 const express = require('express');
 const Request = require('../models/Request');
 const User = require('../models/user'); // Required for /search
+const Notification = require('../models/notification');
 
 module.exports = (io) => {
   const router = express.Router();
 
-  // ✅ Get all requests
+  //  Get all requests
   router.get('/', async (req, res) => {
     try {
       const requests = await Request.find();
       res.json(requests);
     } catch (err) {
-      console.error("❌ ERROR in /api/requests:", err);
+      console.error(" ERROR in /api/requests:", err);
       res.status(500).json({ message: "Error fetching requests" });
     }
   });
 
-  // ✅ Send new interest + update likedBy + emit notification
+  //  Send new interest + update likedBy + emit + save notification
   router.post("/", async (req, res) => {
     const { interestFrom, interestTo } = req.body;
 
@@ -31,15 +33,25 @@ module.exports = (io) => {
 
       // ✅ Add sender to likedBy of receiver
       await User.findByIdAndUpdate(interestTo, {
-        $addToSet: { likedBy: interestFrom } // avoid duplicates
+        $addToSet: { likedBy: interestFrom }
       });
+
+      // ✅ Save notification in DB
+      const notification = new Notification({
+        sender: interestFrom,
+        receiver: interestTo,
+        text: "💌 Someone sent you a request!",
+        type: "interest"
+      });
+
+      await notification.save();
 
       // ✅ Emit real-time notification to receiver
       io.to(interestTo).emit("newNotification", {
-        message: "Someone sent you a request!",
+        message: notification.text,
         from: interestFrom,
-        type: "interest",
-        timestamp: Date.now()
+        type: notification.type,
+        timestamp: notification.createdAt
       });
 
       res.status(201).json({ message: "Interest sent successfully!" });

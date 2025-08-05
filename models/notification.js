@@ -3,8 +3,16 @@ const mongoose = require("mongoose");
 
 const notificationSchema = new mongoose.Schema(
   {
-    sender: { type: String, required: true },
-    receiver: { type: String, required: true },
+    sender: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", //  this is critical
+      required: true
+    },
+    receiver: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // (optional but recommended)
+      required: true
+    },
     type: { type: String, required: true }, // 'message' or 'interest'
     text: { type: String },
     isRead: { type: Boolean, default: false },

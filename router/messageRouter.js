@@ -1,19 +1,31 @@
+// messageRoutes.js
 const express = require("express");
 const router = express.Router();
 const Message = require("../models/message");
+const Notification = require("../models/notification"); //  import Notification model
 
-// ✅ Save new message
+//  Save new message AND create notification
 router.post("/", async (req, res) => {
   try {
     const message = new Message(req.body);
     const saved = await message.save();
+
+    //  Create notification for new message
+    const notification = new Notification({
+      sender: req.body.sender,
+      receiver: req.body.receiver,
+      type: "message",
+      text: "📩 You have a new message.",
+    });
+    await notification.save();
+
     res.status(201).json(saved);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// ✅ Get all messages between two users
+//  Get all messages between two users
 router.get("/:senderId/:receiverId", async (req, res) => {
   try {
     const messages = await Message.find({
@@ -28,7 +40,7 @@ router.get("/:senderId/:receiverId", async (req, res) => {
   }
 });
 
-// ✅ Mark all messages from sender to receiver as seen
+//  Mark all messages from sender to receiver as seen
 router.put("/mark-seen", async (req, res) => {
   const { sender, receiver } = req.body;
 

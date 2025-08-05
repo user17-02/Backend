@@ -1,3 +1,4 @@
+// models/user.js
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
@@ -9,6 +10,7 @@ const userSchema = new mongoose.Schema({
     match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, "Please enter a valid email address"]
   },
   password: { type: String, required: true },
+  mustChangePassword: { type: Boolean, default: false },
 
   // Basic profile info
   name: { type: String },
@@ -43,6 +45,15 @@ const userSchema = new mongoose.Schema({
   income: { type: String },
   educationDetails: { type: String },
 
+  // Legacy/front-end field "job" that syncs into profession
+  job: {
+    type: String,
+    set: function (v) {
+      this.profession = v;
+      return v;
+    }
+  },
+
   // Lifestyle
   diet: { type: String, enum: ['Vegetarian', 'Non-Vegetarian', 'Eggetarian', 'Vegan'] },
   smoking: { type: String, enum: ['Yes', 'No', 'Occasionally'] },
@@ -61,8 +72,11 @@ const userSchema = new mongoose.Schema({
     religion: { type: String },
     caste: { type: String },
     education: { type: String },
+    city:{type:String},
     profession: { type: String },
-    location: { type: String }
+    location: { type: String },
+    job: { type: String } ,
+    complexion: { type: String, enum: ['Fair', 'Wheatish', 'Dark'] }// legacy / frontend variant
   },
 
   // Image
@@ -76,8 +90,28 @@ const userSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-// Update timestamp before saving
-userSchema.pre('save', function(next) {
+// Pre-save hook: normalize and sync legacy partnerPreferences.job to profession, update timestamp
+userSchema.pre('save', function (next) {
+  const capitalize = str => {
+    if (!str || typeof str !== 'string') return str;
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+
+  if (this.complexion) this.complexion = capitalize(this.complexion);
+  if (this.bodyType) this.bodyType = capitalize(this.bodyType);
+  if (this.gender) this.gender = capitalize(this.gender);
+
+  // partnerPreferences.job -> profession if profession missing
+  if (this.partnerPreferences) {
+    if (this.partnerPreferences.job && !this.partnerPreferences.profession) {
+      this.partnerPreferences.profession = this.partnerPreferences.job;
+    }
+    // Optionally normalize partnerPreferences fields (e.g., profession)
+    if (this.partnerPreferences.profession) {
+      this.partnerPreferences.profession = capitalize(this.partnerPreferences.profession);
+    }
+  }
+
   this.updatedAt = Date.now();
   next();
 });

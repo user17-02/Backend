@@ -4,7 +4,7 @@ const router = express.Router();
 const Like = require("../models/Like");
 const User = require("../models/user");
 
-// ✅ Like or Unlike Toggle
+// Like or Unlike Toggle
 router.post("/toggle", async (req, res) => {
   const { likedFrom, likedTo } = req.body;
 
@@ -24,7 +24,7 @@ router.post("/toggle", async (req, res) => {
   }
 });
 
-// ✅ Get all users who liked this user
+//  Get all users who liked this user
 router.get("/received/:userId", async (req, res) => {
   try {
     const likes = await Like.find({ likedTo: req.params.userId }).populate("likedFrom");
@@ -34,7 +34,7 @@ router.get("/received/:userId", async (req, res) => {
   }
 });
 
-// ✅ Get all users that this user has liked
+//  Get all users that this user has liked
 router.get("/sent/:userId", async (req, res) => {
   try {
     const likes = await Like.find({ likedFrom: req.params.userId }).populate("likedTo");
@@ -45,7 +45,7 @@ router.get("/sent/:userId", async (req, res) => {
   }
 });
 
-// ✅ Get just liked user IDs
+//  Get just liked user IDs
 router.get("/ids/:userId", async (req, res) => {
   try {
     const likes = await Like.find({ likedFrom: req.params.userId });
@@ -56,7 +56,7 @@ router.get("/ids/:userId", async (req, res) => {
   }
 });
 
-// ✅ Get list of user IDs who liked me
+//  Get list of user IDs who liked me
 router.get("/liked-me/:userId", async (req, res) => {
   try {
     const likes = await Like.find({ likedTo: req.params.userId });
@@ -67,7 +67,7 @@ router.get("/liked-me/:userId", async (req, res) => {
   }
 });
 
-// ✅ Manual Unlike (optional, since toggle already handles this)
+//  Manual Unlike (optional, since toggle already handles this)
 router.delete("/unlike", async (req, res) => {
   const { likedFrom, likedTo } = req.body;
 
@@ -80,7 +80,7 @@ router.delete("/unlike", async (req, res) => {
 
     return res.status(200).json({ message: "Unliked successfully" });
   } catch (error) {
-    console.error("🔥 Error in unlike route:", error.message);
+    console.error(" Error in unlike route:", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
