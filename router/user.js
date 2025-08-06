@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const router = express.Router();
 const User = require('../models/user');
 
-// Helper to capitalize enum-like strings consistently
+// Capitalizes first letter of enum-like strings
 const capitalize = (str) => {
   if (typeof str !== 'string') return str;
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
@@ -30,7 +30,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// ✅ Login 
+// ✅ Login
 router.post('/login', async (req, res) => {
   const { loginInput, password } = req.body;
 
@@ -52,7 +52,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ✅ Forgot Password (reset to temporary password)
+// ✅ Forgot password
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
 
@@ -72,23 +72,33 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-// Route: PUT /api/user/change-password
-router.post("/change-password", async (req, res) => {
-  const { newPassword } = req.body;
-  const userId = req.session?.user?._id; // adjust based on how you're tracking session
+// ✅ Change password
+router.put('/change-password', async (req, res) => {
+  try {
+    const { userId, currentPassword, newPassword } = req.body;
 
-  if (!userId) return res.status(401).json({ message: "Not logged in" });
+    if (!userId || !currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
 
-  const hashed = await bcrypt.hash(newPassword, 10);
-  await User.findByIdAndUpdate(userId, {
-    password: hashed,
-    mustChangePassword: false
-  });
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-  res.status(200).json({ message: "Password changed successfully" });
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(401).json({ message: 'Current password is incorrect' });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
-// ✅ Get all users excluding current
+// ✅ Get all users except current user
 router.get('/all/:id', async (req, res) => {
   try {
     const users = await User.find({ _id: { $ne: req.params.id } });
@@ -103,7 +113,7 @@ router.get('/all/:id', async (req, res) => {
   }
 });
 
-// ✅ Get one user by ID (secured)
+// ✅ Get a single user by ID
 router.get('/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -117,7 +127,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ✅ Update profile
+// ✅ Update user profile
 router.put('/:id', async (req, res) => {
   try {
     console.log("=== Update request ===");
@@ -126,30 +136,37 @@ router.put('/:id', async (req, res) => {
 
     const updateData = { ...req.body };
 
+    // Remap job → profession
     if (updateData.job) {
       updateData.profession = updateData.job;
       delete updateData.job;
     }
+
     if (updateData.partnerPreferences?.job) {
       updateData.partnerPreferences.profession = updateData.partnerPreferences.job;
       delete updateData.partnerPreferences.job;
     }
 
+    // Prevent updating sensitive fields
     delete updateData.password;
     delete updateData.name;
     delete updateData.email;
 
+    // Normalize enums
     if (updateData.gender) updateData.gender = capitalize(updateData.gender);
     if (updateData.complexion) updateData.complexion = capitalize(updateData.complexion);
     if (updateData.bodyType) updateData.bodyType = capitalize(updateData.bodyType);
 
+    // Handle hobbies/interests
     if (typeof updateData.hobbies === 'string') {
       updateData.hobbies = updateData.hobbies.split(',').map(h => h.trim()).filter(h => h);
     }
+
     if (typeof updateData.interests === 'string') {
       updateData.interests = updateData.interests.split(',').map(i => i.trim()).filter(i => i);
     }
 
+    // Handle partner preferences
     if (updateData.partnerPreferences) {
       const pp = { ...updateData.partnerPreferences };
 
@@ -157,6 +174,7 @@ router.put('/:id', async (req, res) => {
         const nums = pp.ageRange.split(/[-,]/).map(n => Number(n.trim())).filter(n => !isNaN(n));
         pp.ageRange = nums;
       }
+
       if (typeof pp.heightRange === 'string') {
         const nums = pp.heightRange.split(/[-,]/).map(n => Number(n.trim())).filter(n => !isNaN(n));
         pp.heightRange = nums;
@@ -175,24 +193,25 @@ router.put('/:id', async (req, res) => {
       { new: true, runValidators: true, context: 'query' }
     );
 
-    if (!updated) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!updated) return res.status(404).json({ message: "User not found" });
 
     const { password, ...safeUser } = updated.toObject();
-    console.log("Updated user returned:", safeUser);
     res.set('Cache-Control', 'no-store');
     res.json(safeUser);
   } catch (err) {
     console.error("Update failed:", err);
     if (err.name === 'ValidationError') {
-      return res.status(400).json({ message: "Validation failed", error: err.message, details: err.errors });
+      return res.status(400).json({
+        message: "Validation failed",
+        error: err.message,
+        details: err.errors
+      });
     }
     res.status(500).json({ message: "Update failed", error: err.message });
   }
 });
 
-// ✅ Get users with complete profile only
+// ✅ Get all users with completed profile
 router.get('/', async (req, res) => {
   try {
     const users = await User.find({
@@ -214,16 +233,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Debug endpoint (temporary, remove in production)
-router.get('/debug/:id', async (req, res) => {
-  try {
-    const user = await User.findById(req.params.id).lean();
-    if (!user) return res.status(404).json({ message: "Not found" });
-    res.json(user);
-  } catch (e) {
-    console.error("Debug fetch error:", e);
-    res.status(500).json({ error: e.message });
-  }
-});
+
 
 module.exports = router;
