@@ -1,6 +1,6 @@
 // interestRoutes.js or wherever you handle requests + interest
 const express = require('express');
-const Request = require('../models/Request');
+const Request = require('../models/request');
 const User = require('../models/user'); // Required for /search
 const Notification = require('../models/notification');
 

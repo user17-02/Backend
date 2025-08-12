@@ -28,6 +28,8 @@ const messageRouter = require("./router/messageRouter");
 const likeRouter = require("./router/LikeRouter");
 const notificationRouter = require("./router/notificationRouter");
 
+const adminRouter = require("./router/admin");
+
 // Middleware
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 app.use(express.json({ limit: "10mb" }));
