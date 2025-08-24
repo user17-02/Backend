@@ -27,6 +27,7 @@ const requestRouterWithSocket = require("./router/Request")(io);
 const messageRouter = require("./router/messageRouter");
 const likeRouter = require("./router/LikeRouter");
 const notificationRouter = require("./router/notificationRouter");
+const testAuthRoutes = require("./router/authTest");
 
 const adminRouter = require("./router/admin");
 
@@ -37,7 +38,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // MongoDB Connection
 mongoose
-  .connect("mongodb://localhost:27017/test", {
+  .connect("mongodb://127.0.0.1:27017/test", {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -50,6 +51,7 @@ app.use("/api/requests", requestRouterWithSocket);
 app.use("/api/message", messageRouter);
 app.use("/api/likes", likeRouter);
 app.use("/api/notifications", notificationRouter);
+app.use("/api/test-auth", testAuthRoutes);
 
 // Socket.IO Events
 io.on("connection", (socket) => {
